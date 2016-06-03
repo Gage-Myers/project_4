@@ -1,3 +1,5 @@
+
+// Set gloabal variables for game
 var gameWidth = 400;
 var gameHeight = 500;
 var gameScale = 1;
@@ -38,6 +40,7 @@ var display = StateMachine.create({
 
 PIXI.SCALE_MODES.DEFAULT = PIXI.SCALE_MODES.NEAREST;
 
+// Initialize stage as a container
 var stage =  new PIXI.Container();
 stage.scale.set(gameScale,gameScale);
 
@@ -55,6 +58,13 @@ PIXI.loader
 
 var explosion;
 var theme;
+
+/*
+  In the ready function we create the world
+  from the tile map using the pixiTileUtilities
+  library. Add it to the stage and add the ship
+  sprite as an object layer
+*/
 
 function ready() {
     world = tu.makeTiledWorld("map_json", "../assets/textures.png");
@@ -82,6 +92,11 @@ function ready() {
     animate();
 }
 
+/*
+  Handles swaps between states lose and
+  play by allowing the player to restart
+*/
+
 function mouseHandler(e) {
     if(loss) {
         ship.gx = 11;
@@ -94,6 +109,8 @@ function mouseHandler(e) {
         instructions.visible = false;
     }
 }
+
+// Simple key handle if the ship is alive
 
 function keyDownEventHandler(e) {
     e.preventDefault();
@@ -113,15 +130,18 @@ function keyDownEventHandler(e) {
     }
 }
 
-function isAlive() {
-    return ship.visible;
-}
+
+// Creates index based on our sprite then
+// passing our index into the array for our
+// terrain layer in the tiled map to check for collision
 
 function shipHit() {
     var index = tu.getIndex(ship.x + 16,ship.y - 16,16,16,25);
     console.log(index);
     return hitArr[index] == 0;
 }
+
+// Plays the explosion sound once upon losing
 
 function explode() {
     if (ship.visible) {
@@ -154,6 +174,9 @@ function animate() {
     renderer.render(stage);
 }
 
+// Simply moves the player upward toward the end of the screen
+// then only moves the player once the map reaches the end
+
 function update_camera() {
   if(world.position.y < 0) {
     world.position.y += 1;
@@ -161,6 +184,5 @@ function update_camera() {
   }
   else {
     ship.position.y -= 2;
-    console.log(ship.position.y);
   }
 }
