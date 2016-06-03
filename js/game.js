@@ -1,6 +1,7 @@
 var gameWidth = 400;
 var gameHeight = 500;
 var gameScale = 1;
+var DIM = 16;
 
 var gameport = document.getElementById('gameport');
 var renderer =  PIXI.autoDetectRenderer(gameWidth, gameHeight, {backgroundColor: 0x0});
@@ -14,7 +15,21 @@ var instructions = new PIXI.Text('Click anywhere to continue', {font: '16px Aria
 var win = new PIXI.Text('You escaped the invasion', {font: '30px Arial', fill: 0x0, align: 'center'});
 var lose = new PIXI.Text('Sorry you lost', {font: '24px Arial', fill: 0x0, align: 'center'});
 
-
+// State Machine for Display
+var display = StateMachine.create({
+    initial: {state: 'begin', event: 'init'},
+    error: function() {},
+    events: [
+        {name: "start" , from: "begin", to: "play"},
+        {name: "select", from: "begin", to: "end"},
+        {name: "win"   , from: "play", to: "end"},
+        {name: "replay", from: "end", to: "begin"}],
+    callbacks: {
+        onbegin: function() {},
+        onplay : function() {},
+        onend  : function() {}
+    }
+})
 
 PIXI.SCALE_MODES.DEFAULT = PIXI.SCALE_MODES.NEAREST;
 
@@ -34,11 +49,21 @@ PIXI.loader
 function ready() {
     world = tu.makeTiledWorld("map_json", "../assets/textures.png");
     world.position.y = -260*16;
-    ship.position.set(180, 435);
     hitArr =  world.getObject("Hit").data;
     
     stage.addChild(world);
-    stage.addChild(ship);
+
+    ship.gx = 11;
+    ship.gy = 285;
+    ship.x = ship.gx*DIM;
+    ship.y = ship.gy*DIM;
+    ship.anchor.x = 0.0;
+    ship.anchor.y = 1.0;
+
+    var entity = world.getObject("Player");
+    entity.addChild(ship);
+
+    animate();
 }
 
 function mouseHandler(e) {
@@ -49,13 +74,13 @@ function keyDownEventHandler(e) {
     e.preventDefault();
 
     // A: Move Left
-    if (e.keyCode == 65) {
-
+    if (e.keyCode == 65 && ship.position.x > 20 && shipHit()) {
+       createjs.Tween.get(ship).to({x: ship.position.x - 32, y: ship.position.y - 28}, 500);
     }
 
     // D: Move Right
-    if (e.keyCode == 68) {
-        
+    if (e.keyCode == 68 && ship.position.x < 340 && shipHit()) {
+      createjs.Tween.get(ship).to({x: ship.position.x + 32, y: ship.position.y - 28}, 500);       
     }
 
     if (e.keyCode == 32) {
@@ -67,19 +92,10 @@ function isAlive() {
     return ship.visible;
 }
 
-function contains(arr) {
-    for (var i = 0; i < arr.length; i++) {
-        if (arr[i] == runner.position.x) {
-            return true;
-        }
-    }
-    return false;
-}
-
 function shipHit() {
-    var collisionArea = {x: ship.position.x + 16, y: ship.position.y - 16, width: 32, height: 32};
-    var index = tu.getPoints(collisionArea);
-    return tu.hitTestTile(ship, index, hitArr, world, "every").collision;
+    var index = tu.getIndex(ship.x + 16,ship.y - 16,16,16,25);
+    console.log(index);
+    return hitArr[index] == 0;
 }
 
 
@@ -88,8 +104,14 @@ document.addEventListener('mousedown', mouseHandler);
 
 function animate() {
     requestAnimationFrame(animate);
-    if (!shipHit()) {
+    if (shipHit()) {
         update_camera();
+    }
+    else {
+        ship.visible = false;
+    }
+    if (ship.position.y == 0) {
+        ship.visible = false;
     }
     renderer.render(stage);
 }
@@ -97,7 +119,10 @@ function animate() {
 function update_camera() {
   if(world.position.y < 0) {
     world.position.y += 1;
+    ship.position.y -= 1;
+  }
+  else {
+    ship.position.y -= 2;
+    console.log(ship.position.y);
   }
 }
-
-animate();
