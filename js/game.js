@@ -8,12 +8,17 @@ var renderer =  PIXI.autoDetectRenderer(gameWidth, gameHeight, {backgroundColor:
 
 var ship = new PIXI.Sprite(PIXI.Texture.fromImage('../assets/ship.png'));
 var hitArr;
+var loss = false;
 
 // Text for in game
 var headline = new PIXI.Text('Alien Invasion', {font: '24px Arial', fill: 0x0, align: 'center'});
-var instructions = new PIXI.Text('Click anywhere to continue', {font: '16px Arial', fill: 0x0, align: 'center'});
+var instructions = new PIXI.Text('Click anywhere to restart', {font: '16px Arial', fill: 0xffffff, align: 'center'});
 var win = new PIXI.Text('You escaped the invasion', {font: '30px Arial', fill: 0x0, align: 'center'});
-var lose = new PIXI.Text('Sorry you lost', {font: '24px Arial', fill: 0x0, align: 'center'});
+var lose = new PIXI.Text('Sorry you lost', {font: '24px Arial', fill: 0xffffff, align: 'center'});
+lose.position.set(125,150);
+instructions.position.set(100, 200);
+lose.visible = false;
+instructions.visible = false;
 
 // State Machine for Display
 var display = StateMachine.create({
@@ -42,15 +47,23 @@ var tu =  new TileUtilities(PIXI);;
 gameport.appendChild(renderer.view);
 
 PIXI.loader
+    .add('../assets/explosion.wav')
+    .add('../assets/theme.wav')
     .add('map_json','../assets/map.json')
     .add('tileset', '../assets/textures.png')
     .load(ready);
+
+var explosion;
+var theme;
 
 function ready() {
     world = tu.makeTiledWorld("map_json", "../assets/textures.png");
     world.position.y = -260*16;
     hitArr =  world.getObject("Hit").data;
-    
+
+    explosion = PIXI.audioManager.getAudio("../assets/explosion.wav");
+    theme = PIXI.audioManager.getAudio("../assets/theme.wav");
+
     stage.addChild(world);
 
     ship.gx = 11;
@@ -63,11 +76,23 @@ function ready() {
     var entity = world.getObject("Player");
     entity.addChild(ship);
 
+    stage.addChild(lose);
+    stage.addChild(instructions);
+
     animate();
 }
 
 function mouseHandler(e) {
-    
+    if(loss) {
+        ship.gx = 11;
+        ship.gy = 285;
+        ship.x = ship.gx*DIM;
+        ship.y = ship.gy*DIM;
+        world.position.y = -260*16;
+        ship.visible = true;
+        lose.visible = false;
+        instructions.visible = false;
+    }
 }
 
 function keyDownEventHandler(e) {
@@ -98,6 +123,12 @@ function shipHit() {
     return hitArr[index] == 0;
 }
 
+function explode() {
+    if (ship.visible) {
+        explosion.play();
+    }
+}
+
 
 document.addEventListener('keydown', keyDownEventHandler);
 document.addEventListener('mousedown', mouseHandler);
@@ -106,12 +137,19 @@ function animate() {
     requestAnimationFrame(animate);
     if (shipHit()) {
         update_camera();
+        theme.play();
     }
     else {
+        explode();
         ship.visible = false;
+        lose.visible = true;
+        instructions.visible = true;
+        loss = true;
     }
     if (ship.position.y == 0) {
         ship.visible = false;
+
+
     }
     renderer.render(stage);
 }
